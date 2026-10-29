@@ -145,18 +145,41 @@ def _transcribe_faster_whisper(model, audio_path: str) -> dict:
         initial_prompt=CLINICAL_INITIAL_PROMPT,
         temperature=0.0,
         beam_size=ASR_BEAM_SIZE,
-        vad_filter=True,  # skip silence — big speed win on CPU
+        vad_filter=True,
+        vad_parameters={"threshold": 0.35, "min_speech_duration_ms": 150},
     )
     segments, texts = [], []
     for seg in segments_iter:  # generator: decoding happens here
         text = seg.text.strip()
-        texts.append(text)
-        segments.append({
-            "start": seg.start,
-            "end": seg.end,
-            "text": text,
-            "confidence": seg.avg_logprob,
-        })
+        if text:
+            texts.append(text)
+            segments.append({
+                "start": seg.start,
+                "end": seg.end,
+                "text": text,
+                "confidence": seg.avg_logprob,
+            })
+
+    # Fallback: if VAD filtered out quiet microphone speech, retry without VAD filter
+    if not texts:
+        segments_iter, info = model.transcribe(
+            audio_path,
+            initial_prompt=CLINICAL_INITIAL_PROMPT,
+            temperature=0.0,
+            beam_size=ASR_BEAM_SIZE,
+            vad_filter=False,
+        )
+        for seg in segments_iter:
+            text = seg.text.strip()
+            if text:
+                texts.append(text)
+                segments.append({
+                    "start": seg.start,
+                    "end": seg.end,
+                    "text": text,
+                    "confidence": seg.avg_logprob,
+                })
+
     return {"text": " ".join(texts).strip(), "language": info.language, "segments": segments}
 
 

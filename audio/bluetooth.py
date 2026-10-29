@@ -90,3 +90,85 @@ def default_source_description() -> str | None:
         logger.debug("Failed to detect Bluetooth audio source: %s", e)
 
     return None
+
+
+def ensure_bluetooth_mic_profile() -> None:
+    """On Linux/Raspberry Pi, automatically switch connected Bluetooth headsets
+    from A2DP (playback-only) to HSP/HFP (headset-head-unit) so the microphone
+    is active, and set the bluez input source as the PipeWire/PulseAudio default.
+    """
+    if not shutil.which("pactl"):
+        return
+
+    try:
+        # 1. Check if a bluez_input source already exists
+        sources_res = subprocess.run(
+            ["pactl", "list", "short", "sources"],
+            capture_output=True,
+            text=True,
+            timeout=2,
+        )
+        bluez_source = None
+        if sources_res.returncode == 0:
+            for line in sources_res.stdout.splitlines():
+                parts = line.split()
+                if len(parts) >= 2 and "bluez_input" in parts[1].lower():
+                    bluez_source = parts[1]
+                    break
+
+        # 2. If no bluez_input exists yet, switch bluez_card from A2DP to HSP/HFP
+        if not bluez_source:
+            cards_res = subprocess.run(
+                ["pactl", "list", "short", "cards"],
+                capture_output=True,
+                text=True,
+                timeout=2,
+            )
+            if cards_res.returncode == 0:
+                for line in cards_res.stdout.splitlines():
+                    parts = line.split()
+                    if len(parts) >= 2 and "bluez_card" in parts[1].lower():
+                        card_name = parts[1]
+                        for profile in (
+                            "headset-head-unit",
+                            "headset-head-unit-msbc",
+                            "headset-head-unit-cvsd",
+                        ):
+                            prof_res = subprocess.run(
+                                ["pactl", "set-card-profile", card_name, profile],
+                                capture_output=True,
+                                text=True,
+                                timeout=2,
+                            )
+                            if prof_res.returncode == 0:
+                                break
+
+            # Re-query sources after switching profile
+            sources_res = subprocess.run(
+                ["pactl", "list", "short", "sources"],
+                capture_output=True,
+                text=True,
+                timeout=2,
+            )
+            if sources_res.returncode == 0:
+                for line in sources_res.stdout.splitlines():
+                    parts = line.split()
+                    if len(parts) >= 2 and "bluez_input" in parts[1].lower():
+                        bluez_source = parts[1]
+                        break
+
+        # 3. Set bluez_input as default source and ensure it is unmuted
+        if bluez_source:
+            subprocess.run(
+                ["pactl", "set-default-source", bluez_source],
+                capture_output=True,
+                timeout=2,
+            )
+            subprocess.run(
+                ["pactl", "set-source-mute", bluez_source, "0"],
+                capture_output=True,
+                timeout=2,
+            )
+    except Exception as e:
+        logger.debug("Could not auto-configure Bluetooth mic profile: %s", e)
+

@@ -63,15 +63,19 @@ def _clean_device_name(name: str) -> str:
 def list_input_devices() -> list[dict]:
     """Return [{id, name, default}, …] for every functional input device.
 
-    Forces PortAudio to rescan the OS device list so hotplugged devices
-    (e.g. a Bluetooth headset connected after app launch) are included.
+    Forces PortAudio to rescan the OS device list (when not actively recording)
+    so hotplugged devices (e.g. a Bluetooth headset connected after app launch)
+    are included.
     """
-    # Reinitialize PortAudio to pick up any devices added since startup
-    try:
-        sd._terminate()
-        sd._initialize()
-    except Exception:
-        pass
+    ensure_com()
+    with _lock:
+        is_recording = _state["recording"]
+    if not is_recording:
+        try:
+            sd._terminate()
+            sd._initialize()
+        except Exception:
+            pass
     devices = sd.query_devices()
     hostapis = sd.query_hostapis()
     default_id = sd.default.device[0] if isinstance(sd.default.device, (list, tuple)) else -1
@@ -140,6 +144,14 @@ def routes_via_pipewire(device_id) -> bool:
 
 def start(device_id: int | None = None) -> None:
     """Open an InputStream and begin recording with adaptive hardware negotiation."""
+    ensure_com()
+    if sys.platform.startswith("linux") and routes_via_pipewire(device_id):
+        try:
+            from audio import bluetooth
+            bluetooth.ensure_bluetooth_mic_profile()
+        except Exception:
+            pass
+
     with _lock:
         if _state["recording"]:
             raise RuntimeError("Already recording")
@@ -187,6 +199,7 @@ def start(device_id: int | None = None) -> None:
             (native_sr, native_ch),
             (44100, 2),
             (48000, 2),
+            (8000, 1),
         ]
 
         # Deduplicate attempts while preserving order
@@ -256,9 +269,17 @@ def stop() -> str:
     # 1. Concatenate all float32 frames
     audio_data = np.concatenate(recorder.frames, axis=0)
 
-    # 2. Downmix multi-channel / stereo array to mono
+    # 2. Downmix multi-channel / stereo array to mono (avoiding phase cancellation on Windows stereo mic arrays)
     if audio_data.ndim > 1 and audio_data.shape[1] > 1:
-        audio_data = np.mean(audio_data, axis=1)
+        mean_mix = np.mean(audio_data, axis=1)
+        mean_rms = float(np.sqrt(np.mean(mean_mix ** 2)))
+        ch_rms = [float(np.sqrt(np.mean(audio_data[:, c] ** 2))) for c in range(audio_data.shape[1])]
+        best_ch = int(np.argmax(ch_rms))
+        if ch_rms[best_ch] > 0 and mean_rms < 0.5 * ch_rms[best_ch]:
+            # Channels are phase-inverted or one channel is dead; take the strongest channel
+            audio_data = audio_data[:, best_ch]
+        else:
+            audio_data = mean_mix
     elif audio_data.ndim > 1:
         audio_data = audio_data.squeeze()
 
@@ -269,7 +290,12 @@ def stop() -> str:
         g = gcd(SAMPLE_RATE, capture_sr)
         audio_data = scipy.signal.resample_poly(audio_data, SAMPLE_RATE // g, capture_sr // g)
 
-    # 4. Clip and convert to 16-bit PCM integer WAV
+    # 4. Boost quiet microphone signals before 16-bit quantization so low-gain mics aren't lost
+    peak = float(np.max(np.abs(audio_data))) if len(audio_data) > 0 else 0.0
+    if 1e-5 < peak < 0.25:
+        audio_data = audio_data * (0.5 / peak)
+
+    # 5. Clip and convert to 16-bit PCM integer WAV
     audio_clipped = np.clip(audio_data, -1.0, 1.0)
     audio_int16 = (audio_clipped * 32767.0).astype(np.int16)
 

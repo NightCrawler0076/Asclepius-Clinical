@@ -64,7 +64,7 @@ async function loadAudioDevices() {
   try {
     const micDevices = await apiGet('/api/input-devices');
     micDeviceSelect.innerHTML = '<option value="">Default Microphone</option>';
-    micDevices.slice(0, 7).forEach(device => {
+    micDevices.forEach(device => {
       const optionElement = document.createElement('option');
       optionElement.value = device.id;
       optionElement.textContent = `${device.name}${device.default ? ' [DEFAULT]' : ''}`;
@@ -289,7 +289,7 @@ micStartBtn.addEventListener('click', async () => {
 
     micStartBtn.disabled = true;
     micStopBtn.disabled = false;
-    setStatus(audioStatusBox, '', '');
+    setStatus(audioStatusBox, 'Recording from microphone... Speak now.', 'info');
   } catch (e) {
     setStatus(audioStatusBox, 'Failed to start microphone: ' + e.message, 'error');
   }
@@ -297,7 +297,7 @@ micStartBtn.addEventListener('click', async () => {
 
 micStopBtn.addEventListener('click', async () => {
   micStopBtn.disabled = true;
-  setStatus(audioStatusBox, '', '');
+  setStatus(audioStatusBox, 'Processing & transcribing audio with Whisper...', 'info');
 
   try {
     const model = modelSizeSelect.value;
