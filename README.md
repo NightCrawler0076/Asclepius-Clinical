@@ -1,3 +1,4 @@
+ramees is gay
 # Whisper Transcriber — Flask
 
 Same three modes as the original Streamlit app, plus system/device audio
