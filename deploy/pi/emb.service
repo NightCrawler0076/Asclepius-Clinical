@@ -1,0 +1,29 @@
+[Unit]
+Description=Doctor Voice-to-Prescription (Flask)
+After=network-online.target sound.target bluetooth.target user@__UID__.service
+Wants=network-online.target user@__UID__.service
+
+[Service]
+Type=simple
+# Template: setup_pi.sh replaces __USER__ / __UID__ / __PROJECT_DIR__ and writes
+# deploy/pi/emb.generated.service (installed with: setup_pi.sh --service)
+User=__USER__
+WorkingDirectory=__PROJECT_DIR__
+# Reach the user's PipeWire session (Bluetooth earbuds live there).
+Environment=XDG_RUNTIME_DIR=/run/user/__UID__
+# Best-effort: connect saved earbuds as mic at boot ("-" = don't fail if absent).
+ExecStartPre=-/bin/bash __PROJECT_DIR__/deploy/pi/bt_mic.sh connect
+ExecStart=__PROJECT_DIR__/venv/bin/python app.py
+TimeoutStartSec=90
+Environment=PYTHONUNBUFFERED=1
+Environment=EMB_WHISPER_MODEL=base
+Environment=EMB_LLM_MODEL=qwen2.5-0.5b
+Environment=EMB_ENABLE_SYSTEM_AUDIO=0
+# Set a real secret in production:
+Environment=SECRET_KEY=change-me
+SupplementaryGroups=audio bluetooth
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

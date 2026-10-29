@@ -1,0 +1,45 @@
+# ==============================================================================
+# Raspberry Pi 5 (64-bit Raspberry Pi OS / aarch64) Requirements
+# ==============================================================================
+
+# Core Web Framework
+flask
+
+# Audio Capture & Bluetooth Microphone Streaming
+# sounddevice connects to PipeWire / ALSA for Bluetooth earbuds (HSP/HFP mic) & USB mics
+sounddevice
+# soundcard enables loopback / system audio capture from PipeWire / PulseAudio sinks
+soundcard
+# soundfile provides robust C-based audio read/write for WAV and raw streams
+soundfile
+# pulsectl allows direct Python control of PipeWire/PulseAudio input sources & cards
+pulsectl
+
+# Audio DSP, Normalization & Preprocessing (Bandpass filter, DC removal, RMS leveling)
+numpy
+scipy
+
+# Speech-to-Text (ASR)
+# faster-whisper uses CTranslate2 (int8 quantized) for high-performance ARM execution
+faster-whisper
+
+# PyAV audio/video decoding
+# Pinned to <16 to avoid "open() got an unexpected keyword argument 'metadata_errors'"
+av<16
+
+# PDF Prescription Generation
+reportlab
+
+# Model Downloads & Hugging Face Hub (used by download_models.py & ASR loading)
+huggingface-hub
+
+# Testing & Verification
+pytest
+
+# Package building & distribution helpers
+wheel
+setuptools
+
+# Note: llama-cpp-python is compiled directly on the Pi with OpenBLAS + ARM NEON
+# via deploy/pi/setup_pi.sh:
+# CMAKE_ARGS="-DGGML_BLAS=ON -DGGML_BLAS_VENDOR=OpenBLAS -DGGML_NATIVE=ON" pip install --no-cache-dir llama-cpp-python

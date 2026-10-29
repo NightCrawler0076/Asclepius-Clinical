@@ -1,0 +1,115 @@
+================================================================================
+  DOCTOR VOICE-TO-PRESCRIPTION SYSTEM - FIRST TIME SETUP & RUN GUIDE
+================================================================================
+Target Device: Raspberry Pi 5 (64-bit Raspberry Pi OS / aarch64)
+Privilege Required: Regular User (NO SUDO NEEDED)
+Default Web Port: 5000
+
+--------------------------------------------------------------------------------
+STEP 1: OPEN TERMINAL & NAVIGATE TO PROJECT DIRECTORY
+--------------------------------------------------------------------------------
+Open a terminal on your Raspberry Pi:
+
+  cd ~/Emb_2
+
+Fix permissions and Windows line endings:
+
+  sed -i 's/\r$//' run.sh deploy/pi/*.sh
+  chmod +x run.sh deploy/pi/*.sh
+
+
+--------------------------------------------------------------------------------
+STEP 2: AUTOMATED SETUP (RECOMMENDED)
+--------------------------------------------------------------------------------
+Run the one-shot setup script:
+
+  bash deploy/pi/setup_pi.sh
+
+This script automatically:
+- Installs audio/build packages (portaudio, ffmpeg, pipewire)
+- Creates and activates the Python virtualenv (venv)
+- Compiles llama-cpp-python with ARM NEON / OpenBLAS acceleration
+- Installs all requirements (requirements-pi.txt)
+- Checks the models/ folder and downloads any missing models automatically
+
+--------------------------------------------------------------------------------
+OR STEP 2 (MANUAL SETUP ALTERNATIVE):
+--------------------------------------------------------------------------------
+1. Create and activate virtual environment:
+     python3 -m venv venv
+     source venv/bin/activate
+
+2. Install Python packages:
+     pip install -r requirements-pi.txt
+
+3. Build llama-cpp-python:
+     CMAKE_ARGS="-DGGML_BLAS=ON -DGGML_BLAS_VENDOR=OpenBLAS -DGGML_NATIVE=ON" \
+       pip install --no-cache-dir llama-cpp-python
+
+
+--------------------------------------------------------------------------------
+STEP 3: CONNECT BLUETOOTH EARBUDS AS A MICROPHONE
+--------------------------------------------------------------------------------
+* IMPORTANT: Turn off Bluetooth on your phone/laptop first so your earbuds
+  can enter pairing mode!
+
+1. Put your earbuds in pairing mode (hold the case pairing button until LED blinks).
+2. On your Raspberry Pi desktop:
+   - Click the Bluetooth icon (top-right panel) -> Add Device... -> Select earbuds -> Pair.
+3. Switch to Headset / Mic Mode:
+   - Click the Speaker/Volume icon (top-right panel).
+   - Under 'Audio Inputs', choose your earbuds.
+   - Make sure the profile is set to 'Headset Head Unit (HSP/HFP)' or 'Handsfree'.
+   - DO NOT leave it on 'A2DP / High Fidelity Playback' (A2DP turns the mic off).
+
+4. Optional terminal mic test:
+   arecord -d 3 -f S16_LE -r 16000 test.wav && aplay test.wav
+
+
+--------------------------------------------------------------------------------
+STEP 4: LAUNCH THE APPLICATION
+--------------------------------------------------------------------------------
+Run the startup script:
+
+  ./run.sh
+
+(Or run manually: venv/bin/python app.py)
+
+You will see:
+  Open http://<YOUR-PI-IP>:5000 from any device on your network.
+  * Running on http://127.0.0.1:5000
+  * Running on http://0.0.0.0:5000
+
+
+--------------------------------------------------------------------------------
+STEP 5: USING THE WEB APPLICATION
+--------------------------------------------------------------------------------
+1. Open a browser on your laptop, phone, or Pi and go to:
+   http://<YOUR-PI-IP>:5000
+
+2. Under Microphone / Audio Source, select:
+   [🎧 Bluetooth: <Your Earbuds> (system default)]
+
+3. Select your desired Whisper model (Base, Small, Medium) and LLM Refiner (Qwen 2.5 1.5B, Llama 3.2 1B Medical, or Qwen 2.5 3B Medical).
+   * Models already downloaded in the models/ folder are used immediately.
+   * Any unloaded models will be downloaded automatically on first use.
+
+4. Click 'Start Recording', speak into your earbuds, then click 'Stop & Transcribe'.
+5. Click 'Generate Prescription' to let the local AI parse medications.
+6. Click 'Download PDF' to export the formatted prescription document.
+
+
+--------------------------------------------------------------------------------
+STEP 6: RUN IN THE BACKGROUND (CLOSE TERMINAL WITHOUT STOPPING)
+--------------------------------------------------------------------------------
+To keep the server running even when you close the terminal or disconnect SSH:
+
+  # Start server in background:
+  nohup venv/bin/python app.py > app.log 2>&1 &
+
+  # View live logs:
+  tail -f app.log
+
+  # Stop server when needed:
+  pkill -f "python app.py"
+================================================================================

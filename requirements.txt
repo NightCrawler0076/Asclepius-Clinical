@@ -1,0 +1,9 @@
+flask
+openai-whisper
+sounddevice
+soundcard
+numpy
+scipy
+comtypes; sys_platform == "win32"
+llama-cpp-python
+reportlab

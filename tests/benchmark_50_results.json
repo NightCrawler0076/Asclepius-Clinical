@@ -1,0 +1,948 @@
+{
+  "summary": {
+    "total_cases": 50,
+    "med_recall_percent": 87.6923076923077,
+    "diag_accuracy_percent": 96.0,
+    "avg_latency_sec": 9.554439339637756
+  },
+  "cases": [
+    {
+      "case_id": "case_01",
+      "category": "ENT / Respiratory",
+      "time_sec": 17.641967058181763,
+      "med_score": 100.0,
+      "diag_found": true,
+      "extracted_meds": [
+        "Augmentin",
+        "Paracetamol",
+        "Cetirizine",
+        "Amoxicillin"
+      ],
+      "extracted_diag": [
+        "Acute Pharyngitis",
+        "Pharyngitis"
+      ],
+      "extracted_inv": []
+    },
+    {
+      "case_id": "case_02",
+      "category": "ENT / Respiratory",
+      "time_sec": 10.27684497833252,
+      "med_score": 100.0,
+      "diag_found": true,
+      "extracted_meds": [
+        "Amoxicillin",
+        "Mefenamic Acid",
+        "Ciplox"
+      ],
+      "extracted_diag": [
+        "Acute Otitis Media",
+        "Otitis Media"
+      ],
+      "extracted_inv": []
+    },
+    {
+      "case_id": "case_03",
+      "category": "Pulmonology",
+      "time_sec": 8.296762228012085,
+      "med_score": 33.33333333333333,
+      "diag_found": true,
+      "extracted_meds": [
+        "Formoterol + Budesonide",
+        "Montelukast"
+      ],
+      "extracted_diag": [
+        "Bronchial Asthma"
+      ],
+      "extracted_inv": [
+        "chest x-ray",
+        "spirometry",
+        "x-ray"
+      ]
+    },
+    {
+      "case_id": "case_04",
+      "category": "Pulmonology",
+      "time_sec": 10.658850908279419,
+      "med_score": 100.0,
+      "diag_found": true,
+      "extracted_meds": [
+        "Azithromycin",
+        "Cefuroxime",
+        "Dolo",
+        "Paracetamol"
+      ],
+      "extracted_diag": [
+        "Right Lower Lobe Pneumonia",
+        "Pneumonia"
+      ],
+      "extracted_inv": [
+        "sputum culture",
+        "CBC"
+      ]
+    },
+    {
+      "case_id": "case_05",
+      "category": "ENT / Allergy",
+      "time_sec": 9.1985182762146,
+      "med_score": 100.0,
+      "diag_found": true,
+      "extracted_meds": [
+        "Allegra",
+        "Montair",
+        "Flomist",
+        "Fexofenadine",
+        "Montelukast"
+      ],
+      "extracted_diag": [
+        "Allergic Rhinitis"
+      ],
+      "extracted_inv": []
+    },
+    {
+      "case_id": "case_06",
+      "category": "Gastroenterology",
+      "time_sec": 10.009398221969604,
+      "med_score": 100.0,
+      "diag_found": true,
+      "extracted_meds": [
+        "Pan-D",
+        "Gelusil",
+        "Ganaton",
+        "Pantoprazole"
+      ],
+      "extracted_diag": [
+        "GERD"
+      ],
+      "extracted_inv": []
+    },
+    {
+      "case_id": "case_07",
+      "category": "Gastroenterology",
+      "time_sec": 10.543808698654175,
+      "med_score": 66.66666666666666,
+      "diag_found": true,
+      "extracted_meds": [
+        "Ofloxacin",
+        "Ofloxacin + Ornidazole",
+        "Econorm",
+        "ORS Electral"
+      ],
+      "extracted_diag": [
+        "Acute Gastroenteritis",
+        "Gastroenteritis"
+      ],
+      "extracted_inv": []
+    },
+    {
+      "case_id": "case_08",
+      "category": "Gastroenterology",
+      "time_sec": 8.975535869598389,
+      "med_score": 100.0,
+      "diag_found": true,
+      "extracted_meds": [
+        "Rabeprazole",
+        "Sucralfate"
+      ],
+      "extracted_diag": [
+        "Peptic Ulcer"
+      ],
+      "extracted_inv": []
+    },
+    {
+      "case_id": "case_09",
+      "category": "Gastroenterology",
+      "time_sec": 8.54208779335022,
+      "med_score": 100.0,
+      "diag_found": true,
+      "extracted_meds": [
+        "Drotin-M",
+        "Emset",
+        "Tds",
+        "Drotaverine",
+        "Ondansetron"
+      ],
+      "extracted_diag": [
+        "Spasmodic Lower Abdominal Pain"
+      ],
+      "extracted_inv": [
+        "ultrasound"
+      ]
+    },
+    {
+      "case_id": "case_10",
+      "category": "Gastroenterology",
+      "time_sec": 6.9597814083099365,
+      "med_score": 100.0,
+      "diag_found": false,
+      "extracted_meds": [
+        "Cremaffin Plus",
+        "Isabgol husk"
+      ],
+      "extracted_diag": [],
+      "extracted_inv": []
+    },
+    {
+      "case_id": "case_11",
+      "category": "Cardiology",
+      "time_sec": 8.089084386825562,
+      "med_score": 100.0,
+      "diag_found": true,
+      "extracted_meds": [
+        "Telma-H",
+        "Amlodipine",
+        "Aspirin",
+        "Telmisartan",
+        "Hydrochlorothiazide"
+      ],
+      "extracted_diag": [
+        "Essential Hypertension"
+      ],
+      "extracted_inv": [
+        "ECG",
+        "Lipid profile",
+        "Serum Creatinine",
+        "creatinine"
+      ]
+    },
+    {
+      "case_id": "case_12",
+      "category": "Cardiology",
+      "time_sec": 11.356290102005005,
+      "med_score": 100.0,
+      "diag_found": true,
+      "extracted_meds": [
+        "Sorbitrate",
+        "Metoprolol",
+        "Atorvastatin",
+        "Isosorbide Dinitrate"
+      ],
+      "extracted_diag": [
+        "Stable Angina",
+        "Ischemic Heart Disease",
+        "Angina"
+      ],
+      "extracted_inv": [
+        "chest pa",
+        "2d echo",
+        "echo",
+        "tmt"
+      ]
+    },
+    {
+      "case_id": "case_13",
+      "category": "Cardiology",
+      "time_sec": 10.081857204437256,
+      "med_score": 100.0,
+      "diag_found": true,
+      "extracted_meds": [
+        "Lasix",
+        "Aldactone",
+        "Ramipril",
+        "Furosemide",
+        "Spironolactone"
+      ],
+      "extracted_diag": [
+        "Congestive Heart Failure",
+        "Heart Failure"
+      ],
+      "extracted_inv": [
+        "electrolytes",
+        "KFT"
+      ]
+    },
+    {
+      "case_id": "case_14",
+      "category": "Cardiology",
+      "time_sec": 9.4403817653656,
+      "med_score": 66.66666666666666,
+      "diag_found": true,
+      "extracted_meds": [
+        "Apixaban",
+        "Bisoprolol",
+        "Ramipril"
+      ],
+      "extracted_diag": [
+        "Atrial Fibrillation"
+      ],
+      "extracted_inv": [
+        "holter"
+      ]
+    },
+    {
+      "case_id": "case_15",
+      "category": "Cardiology",
+      "time_sec": 7.114502429962158,
+      "med_score": 50.0,
+      "diag_found": true,
+      "extracted_meds": [
+        "Rosuvastatin"
+      ],
+      "extracted_diag": [
+        "Hypercholesterolemia",
+        "Dyslipidemia"
+      ],
+      "extracted_inv": [
+        "lipid profile",
+        "cholesterol",
+        "ldl"
+      ]
+    },
+    {
+      "case_id": "case_16",
+      "category": "Endocrinology",
+      "time_sec": 10.470089435577393,
+      "med_score": 100.0,
+      "diag_found": true,
+      "extracted_meds": [
+        "Metformin",
+        "Sitagliptin",
+        "Voglibose"
+      ],
+      "extracted_diag": [
+        "Type 2 Diabetes",
+        "Diabetes"
+      ],
+      "extracted_inv": [
+        "HbA1c",
+        "fasting blood sugar",
+        "postprandial blood sugar",
+        "blood sugar",
+        "hb"
+      ]
+    },
+    {
+      "case_id": "case_17",
+      "category": "Endocrinology",
+      "time_sec": 6.781097888946533,
+      "med_score": 100.0,
+      "diag_found": true,
+      "extracted_meds": [
+        "Thyronorm",
+        "Levothyroxine"
+      ],
+      "extracted_diag": [
+        "Primary Hypothyroidism",
+        "Hypothyroidism"
+      ],
+      "extracted_inv": [
+        "thyroid",
+        "tsh"
+      ]
+    },
+    {
+      "case_id": "case_18",
+      "category": "Endocrinology",
+      "time_sec": 9.342817544937134,
+      "med_score": 100.0,
+      "diag_found": true,
+      "extracted_meds": [
+        "Pregabalin",
+        "Methylcobalamin (B12)",
+        "Metformin"
+      ],
+      "extracted_diag": [
+        "Diabetic Peripheral Neuropathy",
+        "Peripheral Neuropathy"
+      ],
+      "extracted_inv": []
+    },
+    {
+      "case_id": "case_19",
+      "category": "Endocrinology",
+      "time_sec": 8.078460216522217,
+      "med_score": 66.66666666666666,
+      "diag_found": true,
+      "extracted_meds": [
+        "Dapagliflozin",
+        "Telmisartan",
+        "Sitagliptin"
+      ],
+      "extracted_diag": [
+        "Diabetes",
+        "Diabetic nephropathy"
+      ],
+      "extracted_inv": [
+        "creatinine",
+        "kft"
+      ]
+    },
+    {
+      "case_id": "case_20",
+      "category": "Endocrinology",
+      "time_sec": 10.183449029922485,
+      "med_score": 100.0,
+      "diag_found": true,
+      "extracted_meds": [
+        "Cholecalciferol (Vitamin D3)",
+        "Shelcal-HD",
+        "Arachitol",
+        "Gemcal"
+      ],
+      "extracted_diag": [
+        "Osteoporosis",
+        "Back Pain"
+      ],
+      "extracted_inv": [
+        "DEXA scan",
+        "bone density"
+      ]
+    },
+    {
+      "case_id": "case_21",
+      "category": "Infectious Disease",
+      "time_sec": 10.005086183547974,
+      "med_score": 100.0,
+      "diag_found": true,
+      "extracted_meds": [
+        "Cefixime",
+        "Azithromycin",
+        "Paracetamol"
+      ],
+      "extracted_diag": [
+        "Typhoid fever",
+        "Typhoid"
+      ],
+      "extracted_inv": [
+        "Widal test",
+        "Blood Culture",
+        "widal"
+      ]
+    },
+    {
+      "case_id": "case_22",
+      "category": "Infectious Disease",
+      "time_sec": 7.883162498474121,
+      "med_score": 100.0,
+      "diag_found": true,
+      "extracted_meds": [
+        "Dolo",
+        "Paracetamol",
+        "Aspirin",
+        "Ibuprofen"
+      ],
+      "extracted_diag": [
+        "Dengue Fever"
+      ],
+      "extracted_inv": [
+        "platelet count",
+        "hematocrit",
+        "dengue"
+      ]
+    },
+    {
+      "case_id": "case_23",
+      "category": "Infectious Disease",
+      "time_sec": 8.087764739990234,
+      "med_score": 100.0,
+      "diag_found": true,
+      "extracted_meds": [
+        "Chloroquine",
+        "Primaquine",
+        "Chlorzoxazone"
+      ],
+      "extracted_diag": [
+        "Malaria vivax",
+        "Malaria"
+      ],
+      "extracted_inv": [
+        "peripheral smear for malarial parasite",
+        "peripheral smear",
+        "malaria"
+      ]
+    },
+    {
+      "case_id": "case_24",
+      "category": "Infectious Disease",
+      "time_sec": 7.051255464553833,
+      "med_score": 0.0,
+      "diag_found": true,
+      "extracted_meds": [
+        "Levothyroxine"
+      ],
+      "extracted_diag": [
+        "Pulmonary Tuberculosis"
+      ],
+      "extracted_inv": [
+        "chest x-ray",
+        "x-ray"
+      ]
+    },
+    {
+      "case_id": "case_25",
+      "category": "Infectious Disease",
+      "time_sec": 9.376574993133545,
+      "med_score": 100.0,
+      "diag_found": true,
+      "extracted_meds": [
+        "Nitrofurantoin",
+        "Urispas",
+        "Citralka liquid"
+      ],
+      "extracted_diag": [
+        "Urinary Tract Infection"
+      ],
+      "extracted_inv": [
+        "urine routine and microscopy",
+        "urine routine"
+      ]
+    },
+    {
+      "case_id": "case_26",
+      "category": "Orthopedics",
+      "time_sec": 9.95316195487976,
+      "med_score": 0.0,
+      "diag_found": true,
+      "extracted_meds": [
+        "Aceclofenac",
+        "Pantoprazole",
+        "Diclofenac (Topical)"
+      ],
+      "extracted_diag": [
+        "Osteoarthritis of knee",
+        "Osteoarthritis"
+      ],
+      "extracted_inv": []
+    },
+    {
+      "case_id": "case_27",
+      "category": "Orthopedics",
+      "time_sec": 10.493953943252563,
+      "med_score": 100.0,
+      "diag_found": true,
+      "extracted_meds": [
+        "Indomethacin",
+        "Colchicine",
+        "Pantocid",
+        "Pantoprazole"
+      ],
+      "extracted_diag": [
+        "Acute Gouty Arthritis",
+        "Arthritis"
+      ],
+      "extracted_inv": [
+        "Serum uric acid test",
+        "uric acid"
+      ]
+    },
+    {
+      "case_id": "case_28",
+      "category": "Orthopedics",
+      "time_sec": 12.395525455474854,
+      "med_score": 100.0,
+      "diag_found": true,
+      "extracted_meds": [
+        "Gabapentin",
+        "Nucoxia",
+        "Myoril",
+        "Etoricoxib",
+        "Thiocolchicoside"
+      ],
+      "extracted_diag": [
+        "Lumbar Disc Herniation",
+        "Sciatica",
+        "Disc Herniation"
+      ],
+      "extracted_inv": [
+        "MRI Lumbar Spine",
+        "mri"
+      ]
+    },
+    {
+      "case_id": "case_29",
+      "category": "Orthopedics",
+      "time_sec": 7.7786500453948975,
+      "med_score": 33.33333333333333,
+      "diag_found": true,
+      "extracted_meds": [
+        "Folic Acid (Vitamin B9)",
+        "Budesonide"
+      ],
+      "extracted_diag": [
+        "Rheumatoid Arthritis"
+      ],
+      "extracted_inv": [
+        "RA factor",
+        "Anti-CCP",
+        "ESR",
+        "LFT"
+      ]
+    },
+    {
+      "case_id": "case_30",
+      "category": "Orthopedics",
+      "time_sec": 15.133800983428955,
+      "med_score": 100.0,
+      "diag_found": true,
+      "extracted_meds": [
+        "Levothyroxine",
+        "Tramadol",
+        "Ultracet",
+        "Neurobion Forte",
+        "Robaxin"
+      ],
+      "extracted_diag": [
+        "Cervical Spondylosis"
+      ],
+      "extracted_inv": []
+    },
+    {
+      "case_id": "case_31",
+      "category": "Dermatology",
+      "time_sec": 9.69394850730896,
+      "med_score": 100.0,
+      "diag_found": true,
+      "extracted_meds": [
+        "Itraconazole",
+        "Luliconazole",
+        "Levocetirizine",
+        "Fluconazole"
+      ],
+      "extracted_diag": [
+        "Tinea cruris",
+        "Fungal Infection"
+      ],
+      "extracted_inv": []
+    },
+    {
+      "case_id": "case_32",
+      "category": "Dermatology",
+      "time_sec": 5.7416722774505615,
+      "med_score": 100.0,
+      "diag_found": true,
+      "extracted_meds": [
+        "Permethrin",
+        "Atarax",
+        "Alprazolam"
+      ],
+      "extracted_diag": [
+        "Scabies"
+      ],
+      "extracted_inv": []
+    },
+    {
+      "case_id": "case_33",
+      "category": "Dermatology",
+      "time_sec": 10.692883968353271,
+      "med_score": 100.0,
+      "diag_found": true,
+      "extracted_meds": [
+        "Clindamycin Gel",
+        "Nadifloxacin cream",
+        "Doxycycline",
+        "Nadifloxacin",
+        "Atenolol"
+      ],
+      "extracted_diag": [
+        "Acne Vulgaris"
+      ],
+      "extracted_inv": []
+    },
+    {
+      "case_id": "case_34",
+      "category": "Dermatology",
+      "time_sec": 9.320944786071777,
+      "med_score": 100.0,
+      "diag_found": true,
+      "extracted_meds": [
+        "Clobetasol",
+        "Calcipotriol",
+        "Cetaphil Moisturizing Cream"
+      ],
+      "extracted_diag": [
+        "Plaque Psoriasis",
+        "Psoriasis"
+      ],
+      "extracted_inv": []
+    },
+    {
+      "case_id": "case_35",
+      "category": "Dermatology",
+      "time_sec": 11.193635940551758,
+      "med_score": 100.0,
+      "diag_found": true,
+      "extracted_meds": [
+        "Bilastine",
+        "Avil",
+        "Calamine Lotion",
+        "Pheniramine"
+      ],
+      "extracted_diag": [
+        "Urticaria"
+      ],
+      "extracted_inv": []
+    },
+    {
+      "case_id": "case_36",
+      "category": "Neurology",
+      "time_sec": 10.880021333694458,
+      "med_score": 100.0,
+      "diag_found": true,
+      "extracted_meds": [
+        "Rizact",
+        "Naproxen",
+        "Domperidone",
+        "Propranolol",
+        "Fluoxetine"
+      ],
+      "extracted_diag": [
+        "Migraine"
+      ],
+      "extracted_inv": [
+        "mri"
+      ]
+    },
+    {
+      "case_id": "case_37",
+      "category": "Neurology",
+      "time_sec": 9.825613021850586,
+      "med_score": 33.33333333333333,
+      "diag_found": true,
+      "extracted_meds": [
+        "Bilastine",
+        "Cetirizine",
+        "Ondansetron"
+      ],
+      "extracted_diag": [
+        "Benign Paroxysmal Positional Vertigo (BPPV)"
+      ],
+      "extracted_inv": []
+    },
+    {
+      "case_id": "case_38",
+      "category": "Neurology",
+      "time_sec": 8.07284688949585,
+      "med_score": 100.0,
+      "diag_found": true,
+      "extracted_meds": [
+        "Syndopa Plus",
+        "Pacitane",
+        "Levodopa + Carbidopa"
+      ],
+      "extracted_diag": [
+        "Parkinson's disease"
+      ],
+      "extracted_inv": [
+        "Brain MRI",
+        "mri"
+      ]
+    },
+    {
+      "case_id": "case_39",
+      "category": "Psychiatry",
+      "time_sec": 8.795366764068604,
+      "med_score": 100.0,
+      "diag_found": false,
+      "extracted_meds": [
+        "Escitalopram",
+        "Clonazepam"
+      ],
+      "extracted_diag": [
+        "Major Depressive Disorder"
+      ],
+      "extracted_inv": []
+    },
+    {
+      "case_id": "case_40",
+      "category": "Psychiatry",
+      "time_sec": 7.775171756744385,
+      "med_score": 100.0,
+      "diag_found": true,
+      "extracted_meds": [
+        "Etilaam",
+        "Inderal",
+        "Propranolol",
+        "Telmisartan"
+      ],
+      "extracted_diag": [
+        "Generalized Anxiety Disorder",
+        "Anxiety Disorder"
+      ],
+      "extracted_inv": []
+    },
+    {
+      "case_id": "case_41",
+      "category": "Pediatrics",
+      "time_sec": 9.719993591308594,
+      "med_score": 100.0,
+      "diag_found": true,
+      "extracted_meds": [
+        "Calpol",
+        "Ascoril-D junior",
+        "Nasoclear Saline Nasal Drops",
+        "Paracetamol"
+      ],
+      "extracted_diag": [
+        "Viral URTI",
+        "Urti"
+      ],
+      "extracted_inv": []
+    },
+    {
+      "case_id": "case_42",
+      "category": "Pediatrics",
+      "time_sec": 9.296771049499512,
+      "med_score": 66.66666666666666,
+      "diag_found": true,
+      "extracted_meds": [
+        "Novamox",
+        "Mefenamic Acid",
+        "Xylometazoline",
+        "Amoxicillin"
+      ],
+      "extracted_diag": [
+        "Acute Suppurative Otitis Media",
+        "Otitis Media"
+      ],
+      "extracted_inv": []
+    },
+    {
+      "case_id": "case_43",
+      "category": "Pediatrics",
+      "time_sec": 7.6224448680877686,
+      "med_score": 100.0,
+      "diag_found": true,
+      "extracted_meds": [
+        "Ondem Syrup",
+        "Enterogermina Oral Suspension",
+        "Zinconia Syrup"
+      ],
+      "extracted_diag": [
+        "Pediatric Acute Gastroenteritis",
+        "Gastroenteritis"
+      ],
+      "extracted_inv": []
+    },
+    {
+      "case_id": "case_44",
+      "category": "Pediatrics",
+      "time_sec": 9.686675310134888,
+      "med_score": 100.0,
+      "diag_found": true,
+      "extracted_meds": [
+        "Asthhalin",
+        "Budesonide",
+        "Montair-LC",
+        "Salbutamol",
+        "Montelukast",
+        "Atenolol"
+      ],
+      "extracted_diag": [
+        "Childhood Asthma",
+        "Asthma"
+      ],
+      "extracted_inv": []
+    },
+    {
+      "case_id": "case_45",
+      "category": "Pediatrics",
+      "time_sec": 6.4609222412109375,
+      "med_score": 100.0,
+      "diag_found": true,
+      "extracted_meds": [
+        "Zentel",
+        "Albendazole"
+      ],
+      "extracted_diag": [
+        "Enterobiasis (Pinworm Infection)"
+      ],
+      "extracted_inv": []
+    },
+    {
+      "case_id": "case_46",
+      "category": "Urology",
+      "time_sec": 7.484174489974976,
+      "med_score": 100.0,
+      "diag_found": true,
+      "extracted_meds": [
+        "Urimax-D",
+        "Tamsulosin",
+        "Ceftriaxone"
+      ],
+      "extracted_diag": [
+        "Benign Prostatic Hyperplasia",
+        "BPH"
+      ],
+      "extracted_inv": [
+        "Serum PSA test",
+        "Ultrasound KUB with post void residual volume",
+        "ultrasound"
+      ]
+    },
+    {
+      "case_id": "case_47",
+      "category": "Urology",
+      "time_sec": 9.609322786331177,
+      "med_score": 100.0,
+      "diag_found": true,
+      "extracted_meds": [
+        "Tamflo",
+        "Ketorolac",
+        "Cital",
+        "Tamsulosin",
+        "Propranolol"
+      ],
+      "extracted_diag": [
+        "Right ureteric calculus"
+      ],
+      "extracted_inv": []
+    },
+    {
+      "case_id": "case_48",
+      "category": "Ophthalmology",
+      "time_sec": 10.57578730583191,
+      "med_score": 100.0,
+      "diag_found": true,
+      "extracted_meds": [
+        "Moxifloxacin (Ophthalmic)",
+        "Refresh Tears eye drops"
+      ],
+      "extracted_diag": [
+        "Bacterial Conjunctivitis",
+        "Conjunctivitis"
+      ],
+      "extracted_inv": []
+    },
+    {
+      "case_id": "case_49",
+      "category": "Dentistry",
+      "time_sec": 13.478014945983887,
+      "med_score": 100.0,
+      "diag_found": true,
+      "extracted_meds": [
+        "Ketorolac",
+        "Augmentin",
+        "Rexidin",
+        "Amoxicillin"
+      ],
+      "extracted_diag": [
+        "Acute Pulpitis"
+      ],
+      "extracted_inv": [
+        "Dental X-ray IOPA of tooth 46",
+        "x-ray"
+      ]
+    },
+    {
+      "case_id": "case_50",
+      "category": "Gynecology",
+      "time_sec": 11.59523344039917,
+      "med_score": 100.0,
+      "diag_found": true,
+      "extracted_meds": [
+        "Krimson-35",
+        "Metformin",
+        "Inositol"
+      ],
+      "extracted_diag": [
+        "Polycystic Ovarian Syndrome (PCOS)",
+        "Pcos"
+      ],
+      "extracted_inv": [
+        "Pelvic Ultrasound",
+        "hormonal profile",
+        "ultrasound"
+      ]
+    }
+  ]
+}

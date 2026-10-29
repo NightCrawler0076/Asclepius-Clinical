@@ -1,0 +1,434 @@
+\documentclass[11pt,a4paper]{article}
+
+% -----------------------------------------------------------------------------
+% Asclepius Clinical -- repository-grounded technical report
+% Generated from the implementation present in the Emb_2 workspace.
+% -----------------------------------------------------------------------------
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{tikz}
+\usepackage{enumitem}
+\usepackage{setspace}
+\usepackage{caption}
+\usepackage{microtype}
+\usepackage{titlesec}
+\usepackage{float}
+
+\usetikzlibrary{arrows.meta,positioning,fit}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!45!black,
+  citecolor=blue!45!black,
+  urlcolor=blue!60!black,
+  pdftitle={Asclepius Clinical: Repository-Grounded Design and Evaluation},
+  pdfauthor={Swayamsiddha}
+}
+
+\definecolor{codebg}{RGB}{248,249,252}
+\definecolor{codekw}{RGB}{31,56,128}
+\definecolor{codestr}{RGB}{163,21,21}
+\definecolor{codecmt}{RGB}{0,110,40}
+\definecolor{codeid}{RGB}{100,75,30}
+
+\lstset{
+  language=Python,
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\color{codekw}\bfseries,
+  stringstyle=\color{codestr},
+  commentstyle=\color{codecmt}\itshape,
+  identifierstyle=\color{codeid},
+  backgroundcolor=\color{codebg},
+  frame=single,
+  rulecolor=\color{black!20},
+  breaklines=true,
+  showstringspaces=false,
+  tabsize=4,
+  columns=fullflexible,
+  keepspaces=true,
+  captionpos=b,
+  numbers=left,
+  numberstyle=\tiny\color{black!50},
+  xleftmargin=2em,
+  framexleftmargin=1.5em
+}
+
+\titleformat{\section}{\large\bfseries}{\thesection}{0.8em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{0.8em}{}
+\setstretch{1.10}
+\setlength{\parskip}{0.35em}
+\setlength{\parindent}{0pt}
+
+\newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\project}{\textbf{Asclepius Clinical}}
+
+\title{\textbf{Asclepius Clinical: Design, Implementation, and Repository-Grounded Evaluation of an Offline-First Voice-to-Prescription Assistant}}
+\author{Swayamsiddha\\
+\textit{Student Researcher}\\
+Doctor Voice-to-Prescription System (\code{Emb\_2})}
+\date{11 October 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This report presents \project, a clinician-in-the-loop application that transforms recorded or uploaded consultation audio into an editable prescription draft while keeping its principal inference and storage path local. The implemented Flask system supports microphone, system-loopback, and file inputs; performs DC-offset removal, fifth-order Butterworth bandpass filtering, and RMS normalization; transcribes with Whisper or faster-whisper using a clinical vocabulary prompt; cleans recurrent automatic-speech-recognition (ASR) distortions; extracts prescription entities using dictionaries and regular expressions; and normalizes medicine names with exact, phonetic, and fuzzy matching against 467 formulary keys. An optional quantized GGUF language model refines the structured output, after which deterministic clinical rules flag missing fields, duplicate ingredients, selected drug--drug interactions, and selected disease--drug conflicts. SQLite persistence, explicit clinician confirmation, and ReportLab PDF generation complete the local workflow.
+
+The repository contains a 50-case text-transcript benchmark for the hybrid extractor and Qwen2.5 1.5B refiner. Its saved results report 87.69\% medication recall, a 96.0\% case-level diagnosis hit rate, and 9.55\,s mean refinement latency. These numbers are useful component-level evidence, but they are not end-to-end ASR or clinical-safety results: the benchmark begins with prepared text, has no word-error-rate measurement or external adjudication, and does not estimate precision, dosage accuracy, calibration, or patient outcomes. Speaker identification, active outbox synchronization, authentication, encryption at rest, and production-grade audit controls remain unimplemented. Accordingly, the present system is a research prototype for drafting and review, not an autonomous prescribing system or validated medical device.
+\end{abstract}
+
+\textbf{Keywords:} clinical ASR; edge inference; voice-to-prescription; phonetic normalization; GGUF; clinical decision support; offline-first software.
+
+% =============================================================================
+\section{Introduction}
+
+\subsection{Problem and design objective}
+Clinical dictation contains brand names, abbreviated schedules, quantities, routes, and follow-up instructions that general-purpose ASR can confuse. Examples represented explicitly in this repository include \code{Augmentin 625}, \code{Dolo 650}, \code{Pan-D}, \code{HbA1c}, and schedules such as \code{1-0-1}, \code{BD}, and \code{SOS}. Cloud-only transcription additionally creates availability and governance concerns when connectivity is unreliable or health information should remain on the clinic device.
+
+The project objective is therefore narrower than autonomous clinical decision-making: capture a doctor's dictation, recover a clinically useful transcript, produce a structured draft, expose warnings, and require human review. The product plan states this boundary explicitly, and the code initializes every generated prescription with status \code{draft}. An explicit confirmation endpoint changes a stored record to \code{confirmed}.
+
+\subsection{Scope of this report}
+This document distinguishes three classes of evidence:
+\begin{enumerate}[leftmargin=1.5em]
+  \item \textbf{Implemented:} behavior directly present in source modules and routes.
+  \item \textbf{Evaluated:} behavior exercised by repository tests or recorded in \code{tests/benchmark\_50\_results.json}.
+  \item \textbf{Planned:} behavior described in \code{Plan.md} or represented only by stubs.
+\end{enumerate}
+This distinction prevents architectural intentions---notably speaker diarization and remote synchronization---from being presented as completed features.
+
+\subsection{Implemented contributions}
+The current repository provides:
+\begin{itemize}[leftmargin=1.5em]
+  \item three audio sources exposed through a Flask/HTML/JavaScript interface;
+  \item CPU-oriented faster-whisper inference with local checkpoint discovery, \code{int8} configuration, deterministic temperature, VAD, and a clinical initial prompt;
+  \item deterministic transcript cleanup and prescription-oriented entity extraction;
+  \item a 467-key medicine dictionary with brand/generic, dose, route, category, and instruction metadata;
+  \item combined Soundex, custom medical-phonetic, prefix, and sequence-similarity normalization;
+  \item an optional, serialized llama.cpp refinement call with JSON parsing, repair, validation, and fallback;
+  \item a deterministic warning layer, SQLite repositories, editable drafts, confirmation, and PDF output; and
+  \item Raspberry Pi deployment scripts, pre-downloaded Whisper checkpoints, GGUF model files, and offline wheel artefacts.
+\end{itemize}
+
+% =============================================================================
+\section{Requirements and System Boundary}
+
+\subsection{Functional requirements}
+Table~\ref{tab:req} maps the principal requirements to repository evidence.
+
+\begin{table}[H]
+\centering
+\caption{Requirement-to-implementation traceability.}
+\label{tab:req}
+\small
+\begin{tabularx}{\textwidth}{@{}p{2.0cm}X p{4.4cm}@{}}
+\toprule
+\textbf{Requirement} & \textbf{Implemented behavior} & \textbf{Primary evidence} \\
+\midrule
+Audio input & Microphone, optional system loopback, and uploaded audio/video & \code{audio/}, capture routes in \code{app.py} \\
+Offline ASR & Local faster-whisper checkpoint preferred when present; PyTorch Whisper fallback & \code{asr/whisper\_engine.py} \\
+Clinical NLP & Cleanup, extraction, normalization, optional LLM refinement & \code{clinical/}, \code{prescription/generator.py} \\
+Safety review & Structured warnings and explicit clinician confirmation & \code{clinical/rules.py}, confirm route \\
+Persistence & Doctors, patients, consultations, transcripts, prescriptions, outbox table & \code{database/models.py} \\
+Output & Browser review/edit workflow and generated PDF bytes & templates, static JS, \code{pdf\_generator.py} \\
+Edge deployment & Pi detection, reduced beam width, CPU GGUF inference, service/setup scripts & \code{config.py}, \code{deploy/pi/} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Non-functional requirements}
+The design prioritizes local operation, deterministic parsing, bounded edge memory, and graceful degradation. If DSP fails, the original audio path is returned. If the LLM package, selected GGUF, parsing, or inference fails, the deterministic draft is retained. Heavy models are loaded lazily and cached. The design is explicitly single-local-user: recording state is process-global and is therefore not safe for multi-tenant or multi-worker capture without redesign.
+
+\subsection{Safety boundary}
+The system drafts text; it does not establish diagnosis, verify a patient's complete medication/allergy history, calculate renal or pediatric doses, or guarantee interaction completeness. Rule alerts are heuristic prompts, not a certified drug knowledge base. The confirmation endpoint provides a human-action boundary, but the current API does not enforce role authentication or a formally constrained state-transition graph. Furthermore, the generic \code{PUT /api/prescriptions/<id>} route accepts a caller-supplied status. Production deployment must enforce authorization and server-side transitions.
+
+% =============================================================================
+\section{Architecture and Runtime Interaction}
+
+\subsection{Data flow}
+The implemented processing path is
+\begin{equation}
+\text{audio}\rightarrow\text{preprocess}\rightarrow\text{ASR}\rightarrow\text{clean}
+\rightarrow\text{extract}\rightarrow\text{normalize}\rightarrow
+\text{optional LLM}\rightarrow\text{rules}\rightarrow\text{review/store/PDF}.
+\end{equation}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  font=\scriptsize\sffamily,
+  box/.style={draw,rounded corners=2pt,align=center,inner sep=4pt,minimum width=2.35cm,minimum height=0.8cm},
+  arr/.style={-{Latex},thick},
+  node distance=0.55cm and 0.45cm
+]
+\node[box,fill=blue!9] (ui) {Browser UI\\templates/static};
+\node[box,fill=blue!9,right=of ui] (app) {Flask controller\\\code{app.py}};
+\node[box,fill=green!12,below=of ui] (inputs) {mic / loopback / upload};
+\node[box,fill=green!12,right=of inputs] (dsp) {DSP\\\code{preprocessing.py}};
+\node[box,fill=orange!14,right=of dsp] (asr) {Whisper engine};
+\node[box,fill=purple!10,below=of dsp] (nlp) {clean + extract + normalize};
+\node[box,fill=purple!10,right=of nlp] (llm) {optional GGUF refiner};
+\node[box,fill=red!8,below=of nlp] (rules) {clinical rules};
+\node[box,fill=gray!12,left=of rules] (db) {SQLite / WAL};
+\node[box,fill=gray!12,right=of rules] (pdf) {review + PDF};
+\draw[arr] (ui)--(app);
+\draw[arr] (app)--(inputs);
+\draw[arr] (inputs)--(dsp);
+\draw[arr] (dsp)--(asr);
+\draw[arr] (asr)|-(nlp);
+\draw[arr] (nlp)--(llm);
+\draw[arr] (llm)|-(rules);
+\draw[arr] (nlp)--(rules);
+\draw[arr] (rules)--(db);
+\draw[arr] (rules)--(pdf);
+\end{tikzpicture}
+\caption{Implemented runtime data path. The LLM is optional; speaker and network-sync stubs are outside the active path.}
+\label{fig:architecture}
+\end{figure}
+
+\subsection{Consultation sequence}
+For microphone input, \code{POST /api/mic/start} selects a PortAudio input and begins callback capture. \code{POST /api/mic/stop} stops the stream, concatenates frames, downmixes and resamples them, writes a 16-kHz WAV, and calls the transcription pipeline. The front end separately creates a consultation and persists transcript text. Generation loads the latest transcript, resolves patient metadata, creates a draft, runs validation, and inserts a prescription row. A clinician may edit it through \code{PUT}, confirm it through \code{POST /confirm}, and request a ReportLab PDF.
+
+The transcription routes currently return cleaned text and an audio URL to the browser, whereas the internal ASR result also contains language, model name, timestamps, and average log-probability. These richer fields are persisted only when the caller supplies them to the transcript endpoint; they are not automatically carried from every capture response into SQLite.
+
+\subsection{API surface}
+The application exposes device discovery; microphone and loopback start/stop/audio routes; file transcription; doctor and patient CRUD; consultation creation/listing/retrieval; transcript save/retrieve; prescription generation, update, confirmation, deletion, listing, and PDF routes; and LLM status/model-selection routes. The API is pragmatic rather than formally versioned, and it has no OpenAPI schema in the repository.
+
+% =============================================================================
+\section{Methodology}
+
+\subsection{Acquisition and resampling}
+The microphone module tries, in order, 16-kHz mono, 16-kHz device-channel count, native-rate mono, native-rate device-channel count, 44.1-kHz stereo, and 48-kHz stereo, with duplicates removed. For $C$ captured channels,
+\begin{equation}
+x[n]=\frac{1}{C}\sum_{c=1}^{C}x_c[n].
+\end{equation}
+When $f_c\neq 16000$, polyphase resampling uses
+\begin{equation}
+L=\frac{16000}{\gcd(16000,f_c)},\qquad
+M=\frac{f_c}{\gcd(16000,f_c)}.
+\end{equation}
+The result is clipped to $[-1,1]$, converted to signed 16-bit PCM, and written to the configured temporary path.
+
+\subsection{Signal preprocessing}
+For mono waveform $x\in\mathbb{R}^{N}$, the implementation performs
+\begin{align}
+\tilde{x}[n] &= x[n]-\frac{1}{N}\sum_{i=1}^{N}x[i],\\
+y &= \operatorname{SOSFilt}\!\left(\operatorname{Butter}_5(100,f_H),\tilde{x}\right),\\
+r &= \sqrt{\frac{1}{N}\sum_{n=1}^{N}y[n]^2},\\
+z[n] &= \operatorname{clip}\!\left(y[n]\frac{0.08}{r},-1,1\right),
+\end{align}
+where $f_H=\min(8000,\lfloor f_s/2\rfloor-1)$ and normalization is skipped for $r\le 10^{-6}$. The causal \code{sosfilt} operation introduces phase delay; no zero-phase filtering is attempted. A temporary preprocessed WAV is created and is not explicitly removed by the transcription orchestrator, so long-running deployments should add lifecycle cleanup.
+
+\subsection{Clinical ASR}
+The configured model set is \{base, small, medium\}. Backend \code{auto} prefers faster-whisper; locally packaged checkpoints under \code{models/whisper/} prevent network retrieval when present. Faster-whisper uses CPU execution, configurable \code{int8} compute, temperature zero, beam size one on Raspberry Pi and five otherwise, and \code{vad\_filter=True}. The fallback OpenAI Whisper path uses the same clinical prompt and temperature but does not use the standalone \code{audio/vad.py} stub.
+
+Given prompt $p$ and audio $a$, decoding is approximated by
+\begin{equation}
+\hat{w}_{1:L}=\arg\max_{w_{1:L}}\sum_{t=1}^{L}
+\log P_{\mathcal{M}}(w_t\mid w_{<t},p,a).
+\end{equation}
+The prompt supplies brand names, generics, common tests, units, and dosing abbreviations. This is contextual biasing rather than a constrained vocabulary: Whisper may still omit, substitute, or hallucinate tokens. Segment \code{avg\_logprob} is stored under a field named \code{confidence}; it is a log-probability proxy, not a calibrated probability.
+
+\subsection{Transcript cleanup}
+The cleaner applies a fixed sequence: spoken-number normalization, unit normalization, frequency normalization, known ASR corrections, and punctuation injection. Ordering matters because later extraction expects canonical representations such as \code{500 mg}, \code{BD}, and repaired names. These replacements improve known patterns but can change meaning in unanticipated contexts; retaining the raw ASR transcript alongside the cleaned version would improve auditability.
+
+\subsection{Entity extraction}
+The extractor returns
+\[
+E=(C,D,M,I,A,F,N),
+\]
+corresponding to complaints, diagnoses, medications, investigations, advice, follow-up, and notes. Symptoms and diseases are scanned longest-first. Diagnosis extraction combines marker-local windows with a keyword fallback. Medication discovery combines a cached catalogue regex, name-dose patterns, and prescription-verb/form patterns. Clause isolation attempts to keep dose, frequency, duration, route, and instructions attached to the correct medicine, while avoidance phrases such as ``do not take'' and ``stop'' suppress medication candidates.
+
+Frequency is a priority-ordered regex mapping
+\begin{equation}
+F(t)=c_{i^*},\qquad i^*=\min\{i:r_i\text{ matches }t\}.
+\end{equation}
+This maps patterns such as \code{1-0-1} to BD, \code{1-1-1} to TID, and as-needed phrases to SOS. Complaint duration is deliberately blank in the prescription schema, while medication duration is retained.
+
+\subsection{Phonetic and fuzzy medicine normalization}
+The dictionary contains exactly 467 keys in the inspected repository revision. An exact key match scores 1.0. Otherwise, for input token $t$ and catalogue key $v$,
+\begin{align}
+r(t,v)&=\operatorname{SequenceMatcher}(t,v),\\
+\delta_s&=\mathbf{1}[\operatorname{Soundex}(t)=\operatorname{Soundex}(v)],\\
+\delta_p&=\mathbf{1}[\phi(t)=\phi(v)],\\
+s(t,v)&=\min\!\left(1,r+0.22\delta_s\delta_p
++0.12\,\mathbf{1}[\delta_s\oplus\delta_p]\right).
+\end{align}
+If $v$ starts with $t$ and $|t|\ge4$, the score is raised to at least 0.88. The best result is accepted at threshold 0.65 and marked for review below 0.80. The custom key $\phi$ performs medical homophone substitutions, removes internal vowels, collapses repeated consonants, and truncates the result. A non-medicinal blacklist blocks common false positives; recognized pharmaceutical suffixes can admit plausible unseen names at confidence 0.70.
+
+\subsection{Optional local-LLM refinement}
+The LLM registry offers Qwen2.5 1.5B Instruct, Llama 3.2 1B Medical, and Qwen2.5 3B Medical GGUF configurations, with declared RAM estimates of approximately 1.1, 0.8, and 2.2\,GB. llama.cpp runs on CPU with four configurable threads, $n_{ctx}=2048$, at most 512 output tokens, and temperature zero. Only one GGUF is retained in memory, and an \code{RLock} serializes model use and switching.
+
+The prompt includes a sanitized deterministic draft and at most the final 1200 transcript characters. Parsing first tries direct JSON, then a balanced outer object, then limited trailing-comma and quote repair. Alias keys are normalized. Complaints, diagnoses, and investigations are unioned with the deterministic draft. A non-empty validated LLM medication list is primary, with distinct uncovered draft medicines added afterward. Unknown LLM medicines are retained but marked \code{needs\_review}; therefore, catalogue validation reduces risk but does not eliminate hallucinated output. Any top-level refinement failure returns the original draft unchanged.
+
+\subsection{Clinical rule layer}
+The rule engine first reports empty medication lists and missing dose/frequency fields. It then detects multiple paracetamol-containing products, multiple NSAIDs, NSAID plus antiplatelet/anticoagulant, macrolide plus statin, fluoroquinolone plus systemic steroid, and fluoroquinolone plus mineral/antacid combinations. Disease-context rules cover asthma/COPD with beta-blockers, gastrointestinal symptoms with NSAIDs but no PPI, and diabetes with systemic steroids. Alerts have level, message, and field.
+
+These rules use string/set membership over the extracted representation. They do not account for dose, timing beyond a single chelation message, renal or hepatic function, pregnancy, allergies, pharmacogenomics, or a complete interaction database. Messages containing absolute terms such as ``contraindicated'' should be reviewed and qualified by clinical governance before deployment.
+
+\subsection{Persistence and document generation}
+SQLite connections enable WAL mode and foreign keys. Tables cover doctors, patients, consultations, transcripts, prescriptions, and a synchronization queue. JSON stores ASR segments and prescription bodies. Repository SQL uses parameter binding. Two seed records support demonstrations. ReportLab produces a letter-size PDF even though this report and likely Indian printing workflows use A4; changing the generator to A4 is a small but appropriate localization improvement.
+
+% =============================================================================
+\section{Implementation and Deployment}
+
+\subsection{Technology stack}
+\begin{table}[H]
+\centering
+\caption{Implemented technology stack.}
+\small
+\begin{tabularx}{\textwidth}{@{}p{2.6cm}p{3.8cm}X@{}}
+\toprule
+\textbf{Layer} & \textbf{Technology} & \textbf{Purpose} \\
+\midrule
+Web & Flask, HTML, CSS, JavaScript & Route-oriented local UI and JSON API \\
+Capture & sounddevice, soundcard & PortAudio microphone and optional desktop loopback \\
+DSP & NumPy, SciPy & Downmix, polyphase resampling, filtering, normalization \\
+ASR & faster-whisper / openai-whisper & CPU transcription with model cache and prompt conditioning \\
+Clinical NLP & Python regex/dictionaries & Deterministic extraction, normalization, and alerts \\
+Local LLM & llama-cpp-python & Quantized GGUF structured refinement \\
+Storage & sqlite3 & Local relational metadata and JSON payloads \\
+Documents & ReportLab & Prescription PDF generation \\
+Verification & pytest test modules & Unit, integration, concurrency, and scenario tests \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Raspberry Pi profile}
+Pi detection reads \code{/proc/device-tree/model} and can be overridden by \code{EMB\_FORCE\_PI}. The Pi profile defaults to beam size one and disables system loopback unless explicitly enabled. The deployment script installs ffmpeg, PortAudio, and OpenBLAS, and builds llama-cpp-python with BLAS/native optimization. The repository includes base, small, and medium faster-whisper checkpoints, several GGUF files, a systemd service, a Bluetooth microphone helper, and a collection of aarch64/Python 3.13 wheel artefacts.
+
+The deployment documentation describes performance numbers as rough expectations, not results from a controlled experiment. Thermal state, storage, OS image, model choice, audio length, and generated-token count should be recorded in future measurements.
+
+\subsection{Representative orchestration}
+\begin{algorithm}[H]
+\caption{Generate a reviewable prescription draft}
+\begin{algorithmic}[1]
+\REQUIRE transcript $T$, doctor identifier, optional patient, optional LLM key
+\STATE $E\leftarrow\textsc{Extract}(T)$
+\STATE $E\leftarrow\textsc{NormalizeEntities}(E)$
+\IF{selected GGUF and llama.cpp are available}
+  \STATE $E\leftarrow\textsc{Refine}(T,E)$
+\ENDIF
+\STATE remove internal normalization metadata from medications
+\STATE $R\leftarrow\textsc{NewPrescription}(E,\mathrm{status}=\code{draft})$
+\STATE $W\leftarrow\textsc{ValidatePrescription}(R)$
+\STATE persist $R$; return $(R,W)$ to the review interface
+\end{algorithmic}
+\end{algorithm}
+
+% =============================================================================
+\section{Evaluation}
+
+\subsection{Available evidence}
+The repository provides unit tests for phonetic/fuzzy matching, clinical scenarios, transcript cleaning behavior, LLM response parsing/merging, configuration and schema smoke checks, Flask routes, and concurrent refinement. The Flask integration test creates a doctor, patient, consultation, and transcript; generates and reads a prescription; renders the detail page; verifies PDF magic bytes; and removes its test records. Model-specific scripts and a 50-case benchmark exercise local GGUF refinement.
+
+The current execution environment used to prepare this report did not contain the \code{pytest} package, so the test suite was inspected but not re-executed. Consequently, test descriptions below refer to repository intent and committed artefacts, not a newly certified pass.
+
+\subsection{Fifty-case transcript benchmark}
+The benchmark constructs each draft by calling \code{extract()} and \code{normalize\_entities()} on a prepared transcript, then calls \code{refine()} with Qwen2.5 1.5B. For case $i$, its medication score is recall
+\begin{equation}
+R_i=\frac{|G_i\cap \widehat{G}_i|}{|G_i|},
+\end{equation}
+using the script's name-matching logic. Diagnosis success is binary substring matching against expected diagnosis terms. The committed summary reports:
+\begin{align}
+\text{Medication recall} &=87.6923\%,\\
+\text{Diagnosis hit rate} &=96.0\%,\\
+\text{Mean measured latency} &=9.5544\text{ s/case}.
+\end{align}
+Across the saved cases, latency ranges from 5.74 to 17.64\,s, with a median of approximately 9.61\,s. Diagnosis misses occur in \code{case\_10} and \code{case\_39}; two cases have zero medication recall. The asthma case \code{case\_03} records 33.3\% medication recall, illustrating difficulty with some combination inhaler regimens.
+
+\subsection{Interpretation and threats to validity}
+The reported recall answers only whether expected medicine names were recovered. It does not measure false-positive medicines, so it cannot support an F1 score or positive predictive value. It also does not separately score dose, frequency, duration, route, instructions, investigations, advice, negation, or follow-up. Some extracted lists contain both brands and generic constituents, and the benchmark's substring/alias logic may reward duplicates or partial matches differently from clinical adjudication.
+
+Most importantly, the benchmark starts from synthetic or curated text transcripts. It excludes acoustic noise, accents, code-switching, overlapping speakers, Bluetooth distortions, and ASR errors. The recorded latency covers the benchmarked extraction/refinement block on an undocumented machine; it is not full audio-to-PDF latency and cannot be generalized to Raspberry Pi 5 without a controlled hardware report. The 50 cases are repository-authored and have no reported independent clinician annotation or confidence intervals.
+
+\subsection{Required end-to-end evaluation}
+A stronger study should freeze a test split and report:
+\begin{itemize}[leftmargin=1.5em]
+  \item ASR word error rate and clinically weighted error rate for medicine, dose, frequency, and negation tokens;
+  \item entity-level precision, recall, and F1 with exact and clinically acceptable matching;
+  \item field accuracy for dose, route, frequency, duration, follow-up, and negated medicines;
+  \item rule sensitivity/specificity against pharmacist- or clinician-adjudicated prescriptions;
+  \item ablations for prompt only, cleaner, phonetic matching, LLM refinement, and merge strategy;
+  \item cold/warm latency, peak resident memory, CPU utilization, energy, and thermals on the target Pi; and
+  \item blinded clinician editing time, edit distance, acceptance rate, and safety-critical correction count.
+\end{itemize}
+Confidence intervals should be reported at the consultation level, and no patient-identifying audio should enter a public benchmark without consent and governance.
+
+% =============================================================================
+\section{Complexity and Resource Analysis}
+
+Let $N$ denote audio samples, $|T|$ transcript length, $V$ the 467-key formulary, and $K$ the number of medications.
+\begin{table}[H]
+\centering
+\caption{Principal computational costs.}
+\small
+\begin{tabularx}{\textwidth}{@{}p{3.3cm}p{3.5cm}X@{}}
+\toprule
+\textbf{Component} & \textbf{Approximate time} & \textbf{Resource note} \\
+\midrule
+Downmix/resample & $O(N)$ & Output and intermediate waveform storage are linear \\
+SOS filter/RMS & $O(N)$ for fixed order & Creates a temporary 16-bit WAV \\
+Regex cleanup & $O(|T|)$ per fixed pass & Constant collection of substitutions \\
+Dictionary scans & $O(|\mathcal{L}|\,|T|)$ & Lexicon sizes are fixed for this revision \\
+Fuzzy match & $O(|V|\,q)$ per token & $q$ is short-string comparison cost \\
+Rule checks & $O(K)$ for fixed rule sets & Small constant sets and string containment \\
+Whisper & model-dependent & Dominant acoustic compute; cached weights \\
+Autoregressive LLM & token/model-dependent & Dominant post-processing latency and memory \\
+SQLite/PDF & small for clinic records & B-tree access; PDF flowables scale with record size \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% =============================================================================
+\section{Security, Privacy, and Reliability Review}
+
+Local inference reduces network exposure, but ``offline'' does not itself provide confidentiality. The SQLite database, source audio paths, temporary WAV files, PDFs, and model prompts may contain sensitive clinical data. The current server binds to \code{0.0.0.0:5000}, uses a development default secret when no environment value is provided, and has no login, role checks, CSRF controls, TLS termination, encryption at rest, structured audit trail, retention policy, or secure deletion. These are release blockers for real clinical deployment.
+
+Reliability gaps include global recorder state, missing temporary-file cleanup, no database migration system, no transaction spanning generation and persistence, and no idempotency key for repeat generation. SQLite foreign keys protect references within each connection, but API creation paths should validate referenced doctor/patient/consultation rows and return explicit client errors. Deletion behavior and clinical record retention require policy rather than unrestricted UI/API access.
+
+The active sync client returns \code{not\_implemented}; the outbox processor only marks items as skipped. Speaker enrollment returns no embedding, diarization labels the full file as one speaker, and matching returns all segments unchanged. These modules must not be described as privacy or speaker-isolation controls.
+
+% =============================================================================
+\section{Limitations and Development Roadmap}
+
+The most consequential current limitations are: no real doctor-speaker isolation; no validated multilingual or code-switched ASR study; incomplete and heuristic pharmacology rules; unknown LLM medicines retained with a review flag; no production identity/access controls; no active remote synchronization; and no end-to-end clinical evaluation.
+
+A risk-ordered roadmap is:
+\begin{enumerate}[leftmargin=1.5em]
+  \item \textbf{Safety and governance:} authenticated roles, immutable audit events, enforced state transitions, encryption/backup/retention policy, raw-versus-clean transcript provenance, and clinical review of every warning message.
+  \item \textbf{Evaluation:} clinician-annotated audio, ASR/entity/field metrics, negation challenge sets, hallucination precision, and Pi resource profiling.
+  \item \textbf{Pipeline robustness:} real VAD segmentation, speaker enrollment/diarization with uncertainty handling, temporary-file cleanup, and duplicate/idempotent generation controls.
+  \item \textbf{Clinical data model:} allergies, current medicines, weight, pregnancy, renal/hepatic data, terminology identifiers, and versioned formulary/rule provenance.
+  \item \textbf{Offline synchronization:} transactional outbox enqueueing, idempotency keys, authenticated TLS, exponential backoff with jitter, conflict policy, and observable failure states.
+  \item \textbf{Usability:} confidence-aware highlighting at field level, side-by-side audio/transcript review, A4 PDF output, and a visible record of clinician edits.
+\end{enumerate}
+
+% =============================================================================
+\section{Conclusion}
+
+The repository implements a coherent offline-first research prototype: adaptive audio capture, local clinical ASR, deterministic normalization, optional edge-LLM refinement, structured warnings, persistence, review, and PDF generation. Its strongest engineering property is layered degradation: useful deterministic output remains possible without the LLM, and no generated draft must be accepted silently. The 50-case artefact provides encouraging evidence for text-level medication recall and diagnosis detection, but it does not validate the acoustic front end or clinical safety. The appropriate conclusion is therefore measured: \project demonstrates technical feasibility and a sound clinician-review architecture, while production use requires security hardening, real speaker/sync implementations, broader pharmacological governance, and independently adjudicated end-to-end evaluation.
+
+\begin{thebibliography}{9}
+\bibitem{whisper}
+A. Radford et al., ``Robust Speech Recognition via Large-Scale Weak Supervision,'' \emph{arXiv preprint arXiv:2212.04356}, 2022.
+
+\bibitem{ctranslate2}
+G. Klein, F. Hernandez, V. Nguyen, and J. Senellart, ``The OpenNMT Neural Machine Translation Toolkit: 2020 Edition,'' \emph{Proceedings of AMTA Workshop on Neural Machine Translation}, 2020.
+
+\bibitem{soundex}
+R. C. Russell and M. K. Odell, ``Soundex Coding System,'' U.S. Patents 1,261,167 and 1,435,663, 1918 and 1922.
+
+\bibitem{repo}
+\code{Emb\_2} repository artefacts: \code{app.py}, \code{config.py}, \code{audio/}, \code{asr/}, \code{clinical/}, \code{database/}, \code{prescription/}, \code{tests/}, and \code{deploy/pi/}; inspected 11 October 2026.
+\end{thebibliography}
+
+\end{document}

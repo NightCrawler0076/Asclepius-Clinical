@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Asclepius Clinical — AI Voice to Prescription</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"></noscript>
+  <script>
+    (function() {
+      const savedTheme = localStorage.getItem('asclepius-theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+    })();
+  </script>
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header class="app-navbar">
+    <div class="navbar-inner">
+      <div class="brand-wrapper">
+        <div class="brand-badge">⚕</div>
+        <span class="brand-title">Asclepius Clinical</span>
+        <span class="brand-sub">Voice-to-Prescription Assistant</span>
+      </div>
+      <div class="nav-actions">
+        <button id="theme-toggle-btn" class="btn btn-outline-reset btn-sm" title="Toggle Light / Dracula Dark theme" aria-label="Toggle Theme" style="display: inline-flex; align-items: center; gap: 6px;">
+          <span id="theme-icon">🌙</span>
+          <span id="theme-text">Dracula</span>
+        </button>
+        <button id="global-reset-btn" class="btn btn-outline-reset btn-sm" title="Reset all fields, session, and recordings to initial state">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+          Reset Session
+        </button>
+        <div id="llm-status-pill" class="system-pill llm-pill" title="LLM Refinement Status">
+          <span class="status-dot status-inactive"></span>
+          <span id="llm-status-text">LLM: Checking…</span>
+        </div>
+        <div class="system-pill">
+          <span class="status-dot"></span> System Ready
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="page-header">
+      <div>
+        <h1>Clinical Assistant</h1>
+        <p class="caption">Choose your audio source, record natural clinical speech, and review structured prescription drafts.</p>
+      </div>
+    </div>
+
+    <!-- 1. IMMEDIATE AUDIO CAPTURE SOURCE (Live Mic, Speaker Loopback, File Upload) -->
+    <section class="card">
+      <div class="card-header">
+        <div class="card-title-group">
+          <span class="step-indicator step-1">Audio Input</span>
+          <h2>Select Audio Source</h2>
+        </div>
+        <div class="header-models-row">
+          <div class="header-select-item">
+            <label>Speech ASR</label>
+            <select id="model-size-select" title="Whisper Speech Recognition Model">
+              {% set model_labels = {
+                "base": "Whisper Base (Balanced)",
+                "small": "Whisper Small (High accuracy)",
+                "medium": "Whisper Medium (High precision)",
+              } %}
+              {% for size in model_sizes %}
+              <option value="{{ size }}" {% if size == default_model %}selected{% endif %}>{{ model_labels.get(size, size) }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="header-select-item">
+            <label>LLM Refiner</label>
+            <select id="llm-model-select" title="LLM Model for Clinical Extraction">
+              <option value="qwen2.5-1.5b" selected>Qwen2.5 1.5B (~1.1GB)</option>
+              <option value="llama-3.2-1b-medical">Llama 3.2 1B Medical (~800MB)</option>
+              <option value="qwen2.5-3b-medical">Qwen2.5 3B Medical (~2.2GB)</option>
+              <option value="disabled">Disabled (Regex only)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3 Primary Audio Modes -->
+      <div class="tabs-nav">
+        <button class="tab-btn active" data-tab="mic">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+          Live Microphone
+        </button>
+        <button class="tab-btn" data-tab="system">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+          Speaker Audio (Loopback)
+        </button>
+        <button class="tab-btn" data-tab="file">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Audio / Video File
+        </button>
+      </div>
+
+      <!-- PANEL 1: LIVE MIC -->
+      <div class="tab-panel active" id="tab-mic">
+        <div class="form-group">
+          <label>Microphone Device</label>
+          <select id="mic-device-select"></select>
+        </div>
+        <div class="button-group" style="margin-top: 16px;">
+          <button id="mic-start-btn" class="btn btn-record btn-lg">
+            <span class="pulse-dot"></span> Start Mic Recording
+          </button>
+          <button id="mic-stop-btn" class="btn btn-secondary btn-lg" disabled>
+            Stop & Process
+          </button>
+        </div>
+      </div>
+
+      <!-- PANEL 2: SYSTEM AUDIO (LOOPBACK) -->
+      <div class="tab-panel" id="tab-system">
+        <p class="caption" style="margin-bottom: 12px;">Captures playback coming from your PC speakers (e.g. video consultations, media player, or browser).</p>
+        <div class="form-group">
+          <label>Speaker Output Device to Monitor</label>
+          <select id="system-device-select"></select>
+        </div>
+        <div class="button-group" style="margin-top: 16px;">
+          <button id="system-start-btn" class="btn btn-record btn-lg">
+            <span class="pulse-dot"></span> Start Speaker Capture
+          </button>
+          <button id="system-stop-btn" class="btn btn-secondary btn-lg" disabled>
+            Stop & Process
+          </button>
+        </div>
+      </div>
+
+      <!-- PANEL 3: FILE UPLOAD -->
+      <div class="tab-panel" id="tab-file">
+        <p class="caption" style="margin-bottom: 12px;">Upload pre-recorded audio or video consultations (.mp3, .wav, .m4a, .mp4, .mkv, .webm, etc.).</p>
+        <div class="form-group">
+          <label>Select Media File</label>
+          <input type="file" id="file-upload-input" accept=".mp3,.wav,.m4a,.mp4,.avi,.mov,.mkv,.flac,.ogg,.webm">
+        </div>
+        <div style="margin-top: 16px;">
+          <button id="file-transcribe-btn" class="btn btn-primary btn-lg" disabled>
+            Upload & Transcribe File
+          </button>
+        </div>
+      </div>
+
+      <!-- Status notification & Audio preview -->
+      <div id="audio-status-box" class="status-box"></div>
+      <audio id="audio-playback" controls style="display:none;"></audio>
+
+      <!-- Real-time transcript preview -->
+      <div id="transcript-section" class="transcript-panel" style="display:none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <label>Recognized Speech Transcript</label>
+          <span style="font-size: 12px; color: var(--text-muted);">Editable before clinical extraction</span>
+        </div>
+        <textarea id="transcript-text" class="transcript-area" rows="5"></textarea>
+        <div style="margin-top: 12px; display: flex; justify-content: flex-end;">
+          <button id="generate-prescription-btn" class="btn btn-primary">
+            Extract Clinical Entities & Generate Prescription &rarr;
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. CLINICAL CONTEXT (Doctor & Patient Selection) -->
+    <section class="card">
+      <div class="card-header">
+        <div class="card-title-group">
+          <span class="step-indicator step-2">Clinical Context</span>
+          <h2>Patient & Physician Information</h2>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="form-group">
+          <label>Physician</label>
+          <div class="input-with-action">
+            <select id="doctor-select"><option value="">Select physician...</option></select>
+            <button class="btn btn-secondary btn-sm" id="toggle-new-doctor-btn">+ Add</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Patient</label>
+          <div class="input-with-action">
+            <select id="patient-select"><option value="">Select patient...</option></select>
+            <button class="btn btn-secondary btn-sm" id="toggle-new-patient-btn">+ Add</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hidden Inline New Doctor Form -->
+      <div id="new-doctor-panel" class="sub-panel" style="display:none;">
+        <h4>Register New Physician</h4>
+        <div class="grid-2">
+          <input id="new-doc-name" placeholder="Full Name (e.g. Dr. Jane Smith)">
+          <input id="new-doc-specialty" placeholder="Specialty (e.g. General Medicine)">
+          <input id="new-doc-clinic" placeholder="Clinic / Hospital">
+          <input id="new-doc-phone" placeholder="Phone Number">
+        </div>
+        <div class="button-group" style="margin-top: 12px;">
+          <button class="btn btn-primary btn-sm" id="save-doctor-btn">Save Physician</button>
+          <button class="btn btn-ghost btn-sm" id="cancel-doctor-btn">Cancel</button>
+        </div>
+      </div>
+
+      <!-- Hidden Inline New Patient Form -->
+      <div id="new-patient-panel" class="sub-panel" style="display:none;">
+        <h4>Register New Patient</h4>
+        <div class="grid-3">
+          <input id="new-pat-name" placeholder="Patient Name">
+          <input id="new-pat-age" type="number" placeholder="Age">
+          <select id="new-pat-sex">
+            <option value="">Sex</option>
+            <option value="M">Male</option>
+            <option value="F">Female</option>
+            <option value="O">Other</option>
+          </select>
+        </div>
+        <div class="button-group" style="margin-top: 12px;">
+          <button class="btn btn-primary btn-sm" id="save-patient-btn">Save Patient</button>
+          <button class="btn btn-ghost btn-sm" id="cancel-patient-btn">Cancel</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. STRUCTURED PRESCRIPTION DRAFT & REVIEW -->
+    <section class="card" id="prescription-card" style="display:none;">
+      <div class="card-header">
+        <div class="card-title-group">
+          <span class="step-indicator step-3">Prescription Draft</span>
+          <h2>Clinical Review & Confirmation</h2>
+        </div>
+      </div>
+
+      <div id="prescription-warnings-container"></div>
+
+      <div class="rx-sections-stack">
+        <!-- Patient Overview in Prescription -->
+        <div class="rx-block rx-patient-overview">
+          <div class="grid-3">
+            <div class="form-group">
+              <label>Patient Name</label>
+              <input type="text" id="rx-pat-name" placeholder="Patient Full Name">
+            </div>
+            <div class="form-group">
+              <label>Age</label>
+              <input id="rx-pat-age" type="number" placeholder="Age (Yrs)">
+            </div>
+            <div class="form-group">
+              <label>Sex</label>
+              <select id="rx-pat-sex">
+                <option value="">Select Sex...</option>
+                <option value="M">Male</option>
+                <option value="F">Female</option>
+                <option value="O">Other</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Symptoms & Diagnosis (Symmetrical Height Grid) -->
+        <div class="grid-2">
+          <div class="rx-block rx-card-panel">
+            <div class="panel-header">
+              <label>Presenting Complaints</label>
+              <span class="panel-counter" id="complaints-count-badge">0 items</span>
+            </div>
+            <div id="rx-complaints-tags" class="tags-row tags-box"></div>
+            <input type="text" id="rx-add-complaint-input" placeholder="+ Add complaint (e.g. Fever 3 days) and press Enter...">
+          </div>
+
+          <div class="rx-block rx-card-panel">
+            <div class="panel-header">
+              <label>Clinical Diagnosis</label>
+              <span class="panel-counter" id="diagnosis-count-badge">0 items</span>
+            </div>
+            <div id="rx-diagnosis-tags" class="tags-row tags-box"></div>
+            <input type="text" id="rx-add-diagnosis-input" placeholder="+ Add diagnosis and press Enter...">
+          </div>
+        </div>
+
+        <!-- Medications Table -->
+        <div class="rx-block rx-card-panel">
+          <div class="panel-header" style="margin-bottom: 8px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <label>Prescribed Medications</label>
+              <span class="panel-counter" id="meds-count-badge">0 Rx</span>
+            </div>
+            <button class="btn btn-primary-soft btn-sm" id="rx-add-med-btn">+ Add Medication</button>
+          </div>
+          <div class="table-frame">
+            <table class="rx-table">
+              <thead>
+                <tr>
+                  <th style="width: 32%;">Medication Name</th>
+                  <th style="width: 18%;">Dosage / Strength</th>
+                  <th style="width: 24%;">Frequency</th>
+                  <th style="width: 20%;">Duration</th>
+                  <th style="width: 6%; text-align: center;"></th>
+                </tr>
+              </thead>
+              <tbody id="rx-meds-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Investigations & Follow-up (Symmetrical Height Grid) -->
+        <div class="grid-2">
+          <div class="rx-block rx-card-panel">
+            <div class="panel-header">
+              <label>Investigations & Lab Orders</label>
+              <span class="panel-counter" id="inv-count-badge">0 orders</span>
+            </div>
+            <div id="rx-investigations-tags" class="tags-row tags-box"></div>
+            <input type="text" id="rx-add-investigation-input" placeholder="+ Add test (e.g. CBC, Serum Creatinine) and Enter...">
+          </div>
+
+          <div class="rx-block rx-card-panel">
+            <div class="panel-header">
+              <label>Follow-up Schedule</label>
+            </div>
+            <div class="followup-container">
+              <input type="text" id="rx-followup-input" placeholder="e.g. 5 days / Next week / SOS if fever persists">
+              <div class="quick-chips-row">
+                <button type="button" class="quick-chip" data-val="3 days">3 Days</button>
+                <button type="button" class="quick-chip" data-val="5 days">5 Days</button>
+                <button type="button" class="quick-chip" data-val="1 week">1 Week</button>
+                <button type="button" class="quick-chip" data-val="2 weeks">2 Weeks</button>
+                <button type="button" class="quick-chip" data-val="SOS / As needed">SOS</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Advice & Physician Notes (Symmetrical Height Grid) -->
+        <div class="grid-2">
+          <div class="rx-block rx-card-panel">
+            <div class="panel-header">
+              <label>Patient Advice & Dietary Instructions</label>
+            </div>
+            <textarea id="rx-advice-input" placeholder="Dietary restrictions, fluid intake, lifestyle precautions..."></textarea>
+          </div>
+
+          <div class="rx-block rx-card-panel">
+            <div class="panel-header">
+              <label>Physician Clinical Notes (Confidential)</label>
+            </div>
+            <textarea id="rx-notes-input" placeholder="Clinical reasoning, differential diagnosis considerations, exam notes..."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-actions">
+        <button class="btn btn-outline" id="rx-download-pdf-btn" style="display:none;">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download PDF
+        </button>
+        <button class="btn btn-secondary btn-lg" id="rx-save-draft-btn">Save Draft</button>
+        <button class="btn btn-primary btn-lg" id="rx-confirm-btn">Authorize & Confirm Prescription</button>
+      </div>
+
+      <div id="rx-status-box" class="status-box"></div>
+    </section>
+
+    <!-- 4. SAVED PRESCRIPTION HISTORY -->
+    <section class="card" id="history-card">
+      <div class="card-header">
+        <div class="card-title-group">
+          <span class="step-indicator step-4">Records & History</span>
+          <h2>Previously Saved Prescriptions</h2>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span id="history-count-pill" class="badge-status">0 Records</span>
+          <button id="refresh-history-btn" class="btn btn-outline btn-sm" title="Refresh saved prescriptions list">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            Refresh
+          </button>
+        </div>
+      </div>
+
+      <div class="table-frame">
+        <table class="rx-table">
+          <thead>
+            <tr>
+              <th style="width: 140px;">Date & Time</th>
+              <th>Patient</th>
+              <th>Physician</th>
+              <th>Prescribed Meds / Diagnosis</th>
+              <th style="width: 110px;">Status</th>
+              <th style="width: 220px; text-align: right;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="history-tbody">
+            <tr>
+              <td colspan="6" class="empty-state">Loading saved prescriptions...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="/static/consultation.js"></script>
+</body>
+</html>

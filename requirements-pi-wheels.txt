@@ -1,0 +1,8 @@
+# Binary wheel requirements for Raspberry Pi (ARM64 / aarch64)
+# Excludes llama-cpp-python, which is compiled from source on the Pi.
+flask
+faster-whisper
+sounddevice
+numpy
+scipy
+reportlab

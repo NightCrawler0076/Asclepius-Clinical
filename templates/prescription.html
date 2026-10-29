@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prescription Summary</title>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"></noscript>
+<script>
+  (function() {
+    const savedTheme = localStorage.getItem('asclepius-theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+  })();
+</script>
+</head>
+<body>
+  <div class="app-header" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 24px; background: var(--bg-surface); border-bottom: 1px solid var(--border-subtle);">
+    <div class="brand-wrapper">
+      <div class="brand-badge">⚕</div>
+      <span class="brand-title">Asclepius Clinical</span>
+      <span class="badge-status">Prescription Record</span>
+    </div>
+    <div style="display: flex; gap: 10px; align-items: center;">
+      <button id="theme-toggle-btn" class="btn btn-outline-reset btn-sm" title="Toggle Light / Dracula Dark theme" aria-label="Toggle Theme" style="display: inline-flex; align-items: center; gap: 6px;">
+        <span id="theme-icon">🌙</span>
+        <span id="theme-text">Dracula</span>
+      </button>
+      <a id="download-pdf-link" href="#" class="btn btn-primary btn-sm" target="_blank">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download PDF
+      </a>
+      <a href="/" class="btn btn-secondary btn-sm">&larr; Back to Consultation</a>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="page-intro">
+      <h1>Prescription Detail</h1>
+      <p class="caption">Consultation ID: <span id="cons-id" style="font-family: var(--font-mono); color: var(--accent-cyan);"></span></p>
+    </div>
+
+    <div id="loading" class="status busy">Loading prescription data...</div>
+
+    <div id="rx-content" class="card" style="display:none;">
+
+      <div class="rx-grid">
+        <div class="rx-section">
+          <label>Patient Record</label>
+          <div id="rx-patient" style="font-size: 15px; font-weight: 500;"></div>
+        </div>
+
+        <div class="rx-section">
+          <label>Presenting Complaints</label>
+          <div id="rx-complaints" class="tags-container"></div>
+        </div>
+
+        <div class="rx-section">
+          <label>Diagnosis</label>
+          <div id="rx-diagnosis" class="tags-container"></div>
+        </div>
+
+        <div class="rx-section full-width">
+          <label>Medication Schedule</label>
+          <div class="table-wrapper">
+            <table class="rx-table">
+              <thead>
+                <tr>
+                  <th>Medication</th>
+                  <th>Dosage</th>
+                  <th>Frequency</th>
+                  <th>Duration</th>
+                </tr>
+              </thead>
+              <tbody id="rx-meds"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="rx-section">
+          <label>Investigations Requested</label>
+          <div id="rx-investigations" class="tags-container"></div>
+        </div>
+
+        <div class="rx-section">
+          <label>Follow-up</label>
+          <div id="rx-followup" style="font-size: 14px;"></div>
+        </div>
+
+        <div class="rx-section full-width">
+          <label>Patient Advice</label>
+          <div id="rx-advice" style="font-size: 14px; color: var(--text-secondary);"></div>
+        </div>
+
+        <div class="rx-section full-width">
+          <label>Authorization Status</label>
+          <div id="rx-status-text" class="tag" style="display: inline-block;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const consultationId = "{{ consultation_id }}";
+    document.getElementById('cons-id').textContent = consultationId;
+
+    async function loadPrescription() {
+      try {
+        const res = await fetch(`/api/consultations/${consultationId}/prescription`);
+        if (!res.ok) throw new Error('Not found');
+        document.getElementById('download-pdf-link').href = `/api/consultations/${consultationId}/prescription/pdf`;
+        const rx = await res.json();
+        const data = rx.data || {};
+
+        // Patient
+        const pat = data.patient || {};
+        document.getElementById('rx-patient').textContent =
+          `${pat.name || '—'}${pat.age ? ', ' + pat.age + ' yrs' : ''}${pat.sex ? ' (' + pat.sex + ')' : ''}`;
+
+        // Complaints
+        const compDiv = document.getElementById('rx-complaints');
+        (data.complaints || []).forEach(c => {
+          const tag = document.createElement('span');
+          tag.className = 'tag';
+          tag.textContent = c.name || '';
+          compDiv.appendChild(tag);
+        });
+
+        // Diagnosis
+        const diagDiv = document.getElementById('rx-diagnosis');
+        (data.diagnosis || []).forEach(d => {
+          const tag = document.createElement('span');
+          tag.className = 'tag';
+          tag.textContent = d;
+          diagDiv.appendChild(tag);
+        });
+
+        // Medications
+        const tbody = document.getElementById('rx-meds');
+        (data.medications || []).forEach(m => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td><strong>${m.name}</strong></td><td>${m.dose || '—'}</td><td>${m.frequency || '—'}</td><td>${m.duration || '—'}</td>`;
+          tbody.appendChild(tr);
+        });
+
+        // Investigations
+        const invDiv = document.getElementById('rx-investigations');
+        (data.investigations || []).forEach(inv => {
+          const tag = document.createElement('span');
+          tag.className = 'tag';
+          tag.textContent = inv;
+          invDiv.appendChild(tag);
+        });
+
+        // Advice
+        document.getElementById('rx-advice').textContent =
+          (data.advice || []).join('; ') || '—';
+
+        // Follow-up
+        document.getElementById('rx-followup').textContent = data.follow_up || '—';
+
+        // Status
+        const statusEl = document.getElementById('rx-status-text');
+        statusEl.textContent = (rx.status || data.status || 'draft').toUpperCase();
+
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('rx-content').style.display = 'block';
+      } catch (e) {
+        document.getElementById('loading').className = 'status error';
+        document.getElementById('loading').textContent = 'No prescription found for this consultation.';
+      }
+    }
+
+    // Theme toggle
+    const toggleBtn = document.getElementById('theme-toggle-btn');
+    const themeIcon = document.getElementById('theme-icon');
+    const themeText = document.getElementById('theme-text');
+
+    function applyTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('asclepius-theme', theme);
+      if (themeIcon && themeText) {
+        if (theme === 'light') {
+          themeIcon.textContent = '☀️';
+          themeText.textContent = 'Light';
+        } else {
+          themeIcon.textContent = '🌙';
+          themeText.textContent = 'Dracula';
+        }
+      }
+    }
+
+    applyTheme(localStorage.getItem('asclepius-theme') || 'dark');
+
+    if (toggleBtn) {
+      toggleBtn.addEventListener('click', () => {
+        const nextTheme = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+        applyTheme(nextTheme);
+      });
+    }
+
+    loadPrescription();
+  </script>
+</body>
+</html>

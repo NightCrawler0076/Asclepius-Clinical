@@ -1,0 +1,31 @@
+# Virtual environments & Python cache
+venv/
+.venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Large AI Models (run 'python download_models.py' after cloning)
+models/*.gguf
+models/*.bin
+models/whisper/
+deploy/pi/wheels/
+wheels/
+
+# Local SQLite database & recorded consultation audio
+data/*.sqlite
+data/*.sqlite-shm
+data/*.sqlite-wal
+data/consultations/
+data/doctors/
+data/patients/
+*.wav
+
+# OS & Editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
